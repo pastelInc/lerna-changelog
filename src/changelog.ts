@@ -4,7 +4,8 @@ import progressBar from "./progress-bar";
 import { Configuration } from "./configuration";
 import findPullRequestId from "./find-pull-request-id";
 import * as Git from "./git";
-import GithubAPI, { GitHubUserResponse } from "./github-api";
+import GithubAPI, { GitHubUserResponse, GitHubAPIInterface } from "./github-api";
+import GitlabAPIAdapter from "./gitlab-api-adapter";
 import { CommitInfo, Release } from "./interfaces";
 import MarkdownRenderer from "./markdown-renderer";
 
@@ -17,12 +18,12 @@ interface Options {
 
 export default class Changelog {
   private readonly config: Configuration;
-  private github: GithubAPI;
+  private github: GitHubAPIInterface;
   private renderer: MarkdownRenderer;
 
   constructor(config: Configuration) {
     this.config = config;
-    this.github = new GithubAPI(this.config);
+    this.github = config.gitlab ? new GitlabAPIAdapter(this.config) : new GithubAPI(this.config);
     this.renderer = new MarkdownRenderer({
       categories: Object.keys(this.config.labels).map(key => this.config.labels[key]),
       baseIssueUrl: this.github.getBaseIssueUrl(this.config.repo),
@@ -45,6 +46,9 @@ export default class Changelog {
 
     // Step 2: Find tagged commits (local)
     const commitInfos = this.toCommitInfos(commits);
+
+    // Ex: Download PR Id
+    await this.downloadPullRequestId(commitInfos);
 
     // Step 3: Download PR data (remote)
     await this.downloadIssueData(commitInfos);
@@ -147,6 +151,22 @@ export default class Changelog {
         date,
       } as CommitInfo;
     });
+  }
+
+  private async downloadPullRequestId(commitInfos: CommitInfo[]) {
+    progressBar.init("Downloading pull request information…", commitInfos.length);
+    await pMap(
+      commitInfos,
+      async (commitInfo: CommitInfo) => {
+        if (!commitInfo.issueNumber) {
+          commitInfo.issueNumber = await this.github.getPullRequestId(this.config.repo, commitInfo.commitSHA);
+        }
+
+        progressBar.tick();
+      },
+      { concurrency: 5 }
+    );
+    progressBar.terminate();
   }
 
   private async downloadIssueData(commitInfos: CommitInfo[]) {

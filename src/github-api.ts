@@ -24,13 +24,41 @@ export interface GitHubIssueResponse {
   };
 }
 
+export interface GitHubAPIInterface {
+  getBaseIssueUrl(repo: string): string;
+  getIssueData(repo: string, issue: string): Promise<GitHubIssueResponse>;
+  getUserData(login: string): Promise<GitHubUserResponse>;
+  getPullRequestId(repo: string, sha: string): Promise<string | null>;
+}
+
 export interface Options {
   repo: string;
   rootPath: string;
   cacheDir?: string;
 }
 
-export default class GithubAPI {
+export interface GitHubIssueResponse {
+  number: number;
+  title: string;
+  pull_request?: {
+    html_url: string;
+  };
+  labels: Array<{
+    name: string;
+  }>;
+  user: {
+    login: string;
+    html_url: string;
+  };
+}
+
+export interface Options {
+  repo: string;
+  rootPath: string;
+  cacheDir?: string;
+}
+
+export default class GithubAPI implements GitHubAPIInterface {
   private cacheDir: string | undefined;
   private auth: string;
 
@@ -54,6 +82,10 @@ export default class GithubAPI {
     return this._fetch(`https://api.github.com/users/${login}`);
   }
 
+  public async getPullRequestId(repo: string, sha: string): Promise<string | null> {
+    return null;
+  }
+
   private async _fetch(url: string): Promise<any> {
     const res = await fetch(url, {
       cacheManager: this.cacheDir,
@@ -65,6 +97,6 @@ export default class GithubAPI {
   }
 
   private getAuthToken(): string {
-    return process.env.GITHUB_AUTH;
+    return `${process.env.GITHUB_AUTH}`;
   }
 }

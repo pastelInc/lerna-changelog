@@ -13,6 +13,7 @@ export interface Configuration {
   cacheDir?: string;
   nextVersion: string | undefined;
   nextVersionFromMetadata?: boolean;
+  gitlab?: { host: string; https: boolean };
 }
 
 export interface ConfigLoaderOptions {
@@ -31,7 +32,7 @@ export function fromPath(rootPath: string, options: ConfigLoaderOptions = {}): C
   let config = fromPackageConfig(rootPath) || fromLernaConfig(rootPath) || {};
 
   // Step 2: fill partial config with defaults
-  let { repo, nextVersion, labels, cacheDir, ignoreCommitters } = config;
+  let { repo, nextVersion, labels, cacheDir, ignoreCommitters, gitlab } = config;
 
   if (!repo) {
     repo = findRepo(rootPath);
@@ -69,6 +70,13 @@ export function fromPath(rootPath: string, options: ConfigLoaderOptions = {}): C
     ];
   }
 
+  if (gitlab && !gitlab.host) {
+    gitlab = {
+      host: "gitlab.com",
+      https: true,
+    };
+  }
+
   return {
     repo,
     nextVersion,
@@ -76,6 +84,7 @@ export function fromPath(rootPath: string, options: ConfigLoaderOptions = {}): C
     labels,
     ignoreCommitters,
     cacheDir,
+    gitlab,
   };
 }
 
