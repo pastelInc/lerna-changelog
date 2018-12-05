@@ -22,7 +22,7 @@ export interface ConfigLoaderOptions {
 
 export function load(options: ConfigLoaderOptions = {}): Configuration {
   let cwd = process.cwd();
-  let rootPath = execa.sync("git", ["rev-parse", "--show-toplevel"], { cwd }).stdout;
+  let rootPath = cwd;
 
   return fromPath(rootPath, options);
 }
